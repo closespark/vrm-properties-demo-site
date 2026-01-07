@@ -172,7 +172,10 @@ export default async function PropertyDetailPage({
             </p>
             
             <div className="bg-gray-50 p-8 rounded-lg">
-              <PropertyInquiryForm />
+              <PropertyInquiryForm 
+                portalId="YOUR_PORTAL_ID"
+                formId="YOUR_PROPERTY_INQUIRY_FORM_ID"
+              />
             </div>
           </div>
         </section>

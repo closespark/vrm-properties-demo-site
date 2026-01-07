@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 
-export default function PropertyInquiryForm() {
+interface PropertyInquiryFormProps {
+  portalId?: string;
+  formId?: string;
+}
+
+export default function PropertyInquiryForm({ 
+  portalId = 'YOUR_PORTAL_ID', 
+  formId = 'YOUR_PROPERTY_INQUIRY_FORM_ID' 
+}: PropertyInquiryFormProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -22,12 +30,50 @@ export default function PropertyInquiryForm() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Demo site: In production, this would submit to a backend API or HubSpot
-    // For now, we simulate a brief processing time for UX feedback
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Submit to HubSpot Forms API
+    // API endpoint: https://api.hsforms.com/submissions/v3/integration/submit/:portalId/:formId
+    const hubspotEndpoint = `https://api.hsforms.com/submissions/v3/integration/submit/${portalId}/${formId}`;
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    const hubspotFormData = {
+      fields: [
+        { name: 'firstname', value: formData.firstName },
+        { name: 'lastname', value: formData.lastName },
+        { name: 'email', value: formData.email },
+        { name: 'phone', value: formData.phone },
+        { name: 'message', value: formData.message },
+      ],
+      context: {
+        pageUri: typeof window !== 'undefined' ? window.location.href : '',
+        pageName: typeof document !== 'undefined' ? document.title : '',
+      },
+    };
+
+    try {
+      const response = await fetch(hubspotEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(hubspotFormData),
+      });
+
+      if (response.ok) {
+        setIsSubmitted(true);
+      } else {
+        // If HubSpot returns an error (e.g., invalid portal/form ID), still show success for demo
+        // In production, you would handle this error appropriately
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('HubSpot submission response:', errorData);
+        // Show success anyway for demo purposes when using placeholder IDs
+        setIsSubmitted(true);
+      }
+    } catch (err) {
+      // Network error or other issue - still show success for demo
+      console.warn('HubSpot submission error:', err);
+      setIsSubmitted(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
