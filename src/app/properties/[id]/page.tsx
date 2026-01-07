@@ -172,10 +172,7 @@ export default async function PropertyDetailPage({
             </p>
             
             <div className="bg-gray-50 p-8 rounded-lg">
-              <PropertyInquiryForm 
-                propertyTitle={property.title}
-                propertyId={property.id}
-              />
+              <PropertyInquiryForm />
             </div>
           </div>
         </section>

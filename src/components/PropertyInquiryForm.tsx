@@ -2,12 +2,7 @@
 
 import { useState } from 'react';
 
-interface PropertyInquiryFormProps {
-  propertyTitle?: string;
-  propertyId?: string;
-}
-
-export default function PropertyInquiryForm({ propertyTitle, propertyId }: PropertyInquiryFormProps) {
+export default function PropertyInquiryForm() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -27,16 +22,9 @@ export default function PropertyInquiryForm({ propertyTitle, propertyId }: Prope
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Log form submission for demo purposes
-    console.log('Form submitted:', {
-      ...formData,
-      propertyTitle,
-      propertyId,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Simulate form submission delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Demo site: In production, this would submit to a backend API or HubSpot
+    // For now, we simulate a brief processing time for UX feedback
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     setIsSubmitting(false);
     setIsSubmitted(true);
