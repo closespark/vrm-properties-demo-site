@@ -3,7 +3,8 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import HubSpotCTA from '@/components/HubSpotCTA';
-import HubSpotForm from '@/components/HubSpotForm';
+import PropertyActionButtons from '@/components/PropertyActionButtons';
+import PropertyInquiryForm from '@/components/PropertyInquiryForm';
 import { getPropertyById, properties } from '@/data/properties';
 
 export async function generateStaticParams() {
@@ -101,17 +102,7 @@ export default async function PropertyDetailPage({
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="space-y-3">
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md font-semibold transition-colors">
-                    Schedule a Tour
-                  </button>
-                  <button className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 py-3 rounded-md font-semibold transition-colors">
-                    Request Information
-                  </button>
-                  <button className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-md font-semibold transition-colors">
-                    Save Property
-                  </button>
-                </div>
+                <PropertyActionButtons />
               </div>
             </div>
           </div>
@@ -171,7 +162,7 @@ export default async function PropertyDetailPage({
         </section>
 
         {/* Contact Form */}
-        <section className="bg-white py-12">
+        <section id="property-inquiry-form" className="bg-white py-12">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
               Interested in This Property?
@@ -181,9 +172,8 @@ export default async function PropertyDetailPage({
             </p>
             
             <div className="bg-gray-50 p-8 rounded-lg">
-              {/* HubSpot Form for Property Inquiry */}
-              <HubSpotForm 
-                portalId="YOUR_PORTAL_ID" 
+              <PropertyInquiryForm 
+                portalId="YOUR_PORTAL_ID"
                 formId="YOUR_PROPERTY_INQUIRY_FORM_ID"
               />
             </div>
