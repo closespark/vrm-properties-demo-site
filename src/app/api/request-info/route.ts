@@ -200,18 +200,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       details.marketingConsentSet = true;
     }
 
-    // Step 3: Look up the Listing by external_listing_id
+    // Step 3: Look up the Listing by external_listing_id (which maps to assetId)
+    // IMPORTANT: This lookup resolves the external ID to a HubSpot record ID.
+    // The external_listing_id must be the assetId from source data, NOT assetReferenceId.
+    // See DATA_MAPPING.md for identifier documentation.
+    console.log(`Looking up Listing for external_listing_id (assetId): ${formData.external_listing_id}`);
     const listingResult = await findListingByExternalId(formData.external_listing_id);
     
     if (!listingResult.success) {
-      // Log the error but don't fail the request
-      // The contact was still created successfully
-      console.warn('Listing not found:', listingResult.error);
+      // Fail fast: Do not attempt association if Listing lookup failed
+      // This prevents 500 errors from invalid association calls
+      const errorMessage = listingResult.notFound
+        ? `Listing not found in HubSpot for external_listing_id (assetId): ${formData.external_listing_id}. Ensure the Listing exists with this ID.`
+        : `Failed to look up Listing: ${listingResult.error}`;
+      
+      console.warn('Listing lookup failed - skipping association:', {
+        external_listing_id: formData.external_listing_id,
+        notFound: listingResult.notFound,
+        error: listingResult.error,
+      });
       
       return NextResponse.json(
         {
           success: true,
-          message: 'Contact created successfully, but listing not found for association',
+          message: `Contact created successfully, but listing not found for association. ${errorMessage}`,
           details,
         },
         { status: 200 }
@@ -219,21 +231,34 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
     
     details.listingFound = true;
+    console.log(`Listing found: external_listing_id=${formData.external_listing_id} -> HubSpot ID=${listingResult.listingId}`);
 
     // Step 4: Associate the Contact with the Listing
-    // We need the contact ID from the consent result
+    // We use the HubSpot Listing ID from the lookup result (NOT the external_listing_id)
+    // This is critical: the association API requires HubSpot record IDs, not external IDs
     if (consentResult.contactId && listingResult.listingId) {
+      console.log(`Creating Contact-Listing association: Contact=${consentResult.contactId}, Listing=${listingResult.listingId}`);
       const associationResult = await associateContactToListing(
         consentResult.contactId,
         listingResult.listingId
       );
       
       if (!associationResult.success) {
-        // Log the error but don't fail the request
-        console.warn('Failed to create association:', associationResult.error);
+        // Log the error but don't fail the request - contact was still created
+        console.warn('Failed to create Contact-Listing association:', {
+          contactId: consentResult.contactId,
+          listingId: listingResult.listingId,
+          error: associationResult.error,
+        });
       } else {
         details.associationCreated = true;
+        console.log('Contact-Listing association created successfully');
       }
+    } else {
+      console.warn('Cannot create association: missing contactId or listingId', {
+        contactId: consentResult.contactId,
+        listingId: listingResult.listingId,
+      });
     }
 
     // Return success response

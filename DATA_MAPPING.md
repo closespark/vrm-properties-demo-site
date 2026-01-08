@@ -100,8 +100,60 @@ value: externalListingId,  // e.g., '22242'
 2. **Always use `assetId` for external integrations** - It's the authoritative identifier
 3. **Store `assetReferenceId` separately** - If needed, use a dedicated field like `reference_id`
 4. **Document ID sources clearly** - When syncing data, note which source field maps to which target
+5. **Always resolve Listing ID before associations** - Use `findListingByExternalId()` to get the HubSpot record ID
+
+## Association Workflow
+
+When creating Contact-Listing associations in HubSpot, always follow this pattern:
+
+### Correct Workflow
+
+```
+1. Get external_listing_id (assetId) from form submission
+   ↓
+2. Call findListingByExternalId(assetId) to get HubSpot Listing ID
+   ↓
+3. Check if lookup succeeded (fail fast if not found)
+   ↓
+4. Call associateContactToListing(contactId, hubspotListingId)
+```
+
+### Why This Prevents 500 Errors
+
+- The HubSpot Associations API requires **HubSpot record IDs**, not external identifiers
+- Passing `assetId` directly to the association API will fail with a 500 error
+- Passing `assetReferenceId` will also fail because it's not even in HubSpot's `external_listing_id` field
+- By resolving the ID first, we ensure we have a valid HubSpot record to associate
+
+### Code Example
+
+```typescript
+// ✅ CORRECT: Resolve the HubSpot Listing ID first
+const listingResult = await findListingByExternalId(assetId);
+if (!listingResult.success) {
+  // Fail fast - do not attempt association
+  console.error('Listing not found for assetId:', assetId);
+  return;
+}
+await associateContactToListing(contactId, listingResult.listingId);
+
+// ❌ WRONG: Using external ID directly
+await associateContactToListing(contactId, assetId);  // Will fail!
+
+// ❌ WRONG: Using assetReferenceId
+await associateContactToListing(contactId, assetReferenceId);  // Will fail!
+```
 
 ## Troubleshooting
+
+### 500 "Internal Error" on Association
+
+If you're getting 500 errors when creating associations:
+
+1. **Check that you're using the HubSpot Listing ID**, not the external_listing_id (assetId)
+2. **Ensure the Listing lookup succeeded** before calling the association API
+3. **Verify the Listing exists** in HubSpot with the correct `external_listing_id`
+4. **Check the logs** for the resolved HubSpot ID - it should be a numeric HubSpot record ID
 
 ### "Listing not found" errors
 
@@ -116,3 +168,10 @@ If HubSpot records have `assetReferenceId` in `external_listing_id`:
 1. This is incorrect and should be corrected
 2. Update HubSpot records to use `assetId` values instead
 3. Do not change existing HubSpot record IDs - update the `external_listing_id` property value
+
+### Silent Association Failures
+
+If associations are silently failing:
+1. Check server logs for "Failed to create Contact-Listing association" messages
+2. Verify both contactId and listingId are valid HubSpot record IDs
+3. Ensure the HubSpot Private App has the required scopes for associations
