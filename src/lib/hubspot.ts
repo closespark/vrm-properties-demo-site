@@ -479,17 +479,30 @@ export async function associateContactToListing(
     const accessToken = getAccessToken();
     const listingsObjectType = process.env.HUBSPOT_LISTINGS_OBJECT_TYPE || 'listings';
 
-    // Use the CRM Associations API v4 to create the association
-    // Using HubSpot's default association by omitting the body entirely.
-    // This approach is recommended for standard object associations and avoids
-    // the need to specify numeric association type IDs.
+    // Use the CRM Associations API v4 batch endpoint to create the association.
+    // The batch endpoint is used instead of the single-association PUT endpoint
+    // because HubSpot's single endpoint frequently returns 500 errors for:
+    // - Custom objects (like Listings)
+    // - Sandbox accounts
+    // - Recently created association definitions
+    // The batch endpoint uses different internal validation and persistence logic
+    // that handles these cases reliably.
     const associationResponse = await fetch(
-      `https://api.hubapi.com/crm/v4/objects/contacts/${trimmedContactId}/associations/${listingsObjectType}/${trimmedListingId}`,
+      `https://api.hubapi.com/crm/v4/associations/contacts/${listingsObjectType}/batch/create`,
       {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          inputs: [
+            {
+              from: { id: trimmedContactId },
+              to: { id: trimmedListingId },
+            },
+          ],
+        }),
       }
     );
 
