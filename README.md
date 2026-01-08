@@ -149,6 +149,8 @@ vrm-properties-demo-site/
 ## Documentation
 
 - [HUBSPOT_INTEGRATION.md](./HUBSPOT_INTEGRATION.md) - HubSpot forms and tracking setup
+- [REQUEST_INFO_INTEGRATION.md](./REQUEST_INFO_INTEGRATION.md) - Request Info form workflow and Contact-Listing associations
+- [DATA_MAPPING.md](./DATA_MAPPING.md) - Source data identifiers and HubSpot field mapping
 - [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) - Detailed Render deployment guide
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - General deployment options
 

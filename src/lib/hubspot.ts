@@ -19,6 +19,12 @@ export interface RequestInfoFormData {
   lastname: string;
   email: string;
   phone?: string;
+  /**
+   * The external listing ID used for HubSpot Listing lookups.
+   * This value corresponds to `assetId` from source property data.
+   * Do NOT use `assetReferenceId` - it's a secondary reference.
+   * See DATA_MAPPING.md for identifier documentation.
+   */
   external_listing_id: string;
   marketing_opt_in: boolean;
   pageUri?: string;
@@ -35,6 +41,12 @@ export interface HubSpotListingLookupResult {
   success: boolean;
   listingId?: string;
   error?: string;
+  /**
+   * Indicates whether the listing was not found (vs. an API error).
+   * When true, the external_listing_id was valid but no matching record exists in HubSpot.
+   * This allows callers to distinguish between "not found" and "API failure" scenarios.
+   */
+  notFound?: boolean;
 }
 
 export interface HubSpotAssociationResult {
@@ -302,12 +314,36 @@ export async function setMarketingConsent(
  * without relying on HubSpot's internal IDs, making the integration more
  * resilient to data sync issues.
  * 
- * @param externalListingId - The external listing ID to search for
- * @returns Result containing the HubSpot Listing ID if found
+ * **Data Mapping Note**: The external_listing_id corresponds to the `assetId`
+ * field from source property data, NOT the `assetReferenceId` which is a
+ * secondary human-facing reference. See DATA_MAPPING.md for details.
+ * 
+ * **IMPORTANT**: Always resolve the HubSpot Listing record ID via this function
+ * before attempting any association. Do NOT use assetReferenceId or any other
+ * identifier for lookups - this prevents 500 errors from invalid association calls.
+ * 
+ * @param externalListingId - The external listing ID to search for (maps to assetId)
+ * @returns Result containing the HubSpot Listing ID if found, with notFound flag for disambiguation
  */
 export async function findListingByExternalId(
   externalListingId: string
 ): Promise<HubSpotListingLookupResult> {
+  // Guard: Validate the external listing ID format
+  // assetId should be a numeric string (e.g., "22242")
+  const trimmedId = externalListingId?.trim() ?? '';
+  
+  if (!trimmedId) {
+    console.error('findListingByExternalId called with empty external_listing_id');
+    return {
+      success: false,
+      error: 'external_listing_id is required and cannot be empty',
+      notFound: false,
+    };
+  }
+  
+  // Log the lookup attempt for debugging
+  console.log(`Looking up HubSpot Listing by external_listing_id (assetId): ${trimmedId}`);
+
   try {
     const accessToken = getAccessToken();
 
@@ -331,7 +367,7 @@ export async function findListingByExternalId(
                 {
                   propertyName: 'external_listing_id',
                   operator: 'EQ',
-                  value: externalListingId,
+                  value: trimmedId,
                 },
               ],
             },
@@ -343,33 +379,48 @@ export async function findListingByExternalId(
 
     if (!searchResponse.ok) {
       const errorData = await searchResponse.json().catch(() => ({}));
-      console.error('HubSpot listing search error:', errorData);
+      console.error('HubSpot listing search API error:', {
+        status: searchResponse.status,
+        statusText: searchResponse.statusText,
+        error: errorData,
+        externalListingId: trimmedId,
+      });
       return {
         success: false,
-        error: `Failed to search for listing: ${searchResponse.status}`,
+        error: `HubSpot API error: ${searchResponse.status} ${searchResponse.statusText}`,
+        notFound: false,
       };
     }
 
     const searchResult = await searchResponse.json();
 
     if (!searchResult.results || searchResult.results.length === 0) {
-      // Listing not found - this is logged but handled gracefully
-      console.warn('Listing not found for external_listing_id:', externalListingId);
+      // Listing not found - this is a valid scenario that should fail fast for associations
+      console.warn(`No Listing found in HubSpot for external_listing_id (assetId): ${trimmedId}`);
       return {
         success: false,
-        error: `No listing found with external_listing_id: ${externalListingId}`,
+        error: `No listing found with external_listing_id: ${trimmedId}. Ensure the Listing exists in HubSpot with this assetId.`,
+        notFound: true,
       };
     }
 
+    const listingId = searchResult.results[0].id;
+    console.log(`Found HubSpot Listing: external_listing_id=${trimmedId} -> HubSpot ID=${listingId}`);
+
     return {
       success: true,
-      listingId: searchResult.results[0].id,
+      listingId,
+      notFound: false,
     };
   } catch (error) {
-    console.error('Error finding listing by external ID:', error);
+    console.error('Error finding listing by external ID:', {
+      error: error instanceof Error ? error.message : error,
+      externalListingId: trimmedId,
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
+      notFound: false,
     };
   }
 }
@@ -389,14 +440,41 @@ export async function findListingByExternalId(
  * HubSpot's Associations API is idempotent, so calling this multiple times with
  * the same contact-listing pair will not create duplicate associations.
  * 
- * @param contactId - The HubSpot Contact ID
- * @param listingId - The HubSpot Listing ID
+ * **IMPORTANT**: Both contactId and listingId must be valid HubSpot record IDs.
+ * Always resolve the Listing via findListingByExternalId() first to get the
+ * correct HubSpot Listing ID. Using external IDs directly will cause 500 errors.
+ * 
+ * @param contactId - The HubSpot Contact ID (from contact lookup or consent result)
+ * @param listingId - The HubSpot Listing ID (from findListingByExternalId, NOT the assetId)
  * @returns Result indicating success/failure
  */
 export async function associateContactToListing(
   contactId: string,
   listingId: string
 ): Promise<HubSpotAssociationResult> {
+  // Guard: Validate required IDs are present
+  const trimmedContactId = contactId?.trim() ?? '';
+  const trimmedListingId = listingId?.trim() ?? '';
+
+  if (!trimmedContactId) {
+    console.error('associateContactToListing called with empty contactId');
+    return {
+      success: false,
+      error: 'contactId is required for association',
+    };
+  }
+
+  if (!trimmedListingId) {
+    console.error('associateContactToListing called with empty listingId');
+    return {
+      success: false,
+      error: 'listingId is required for association - resolve via findListingByExternalId first',
+    };
+  }
+
+  // Log the association attempt for debugging
+  console.log(`Creating association: Contact ${trimmedContactId} -> Listing ${trimmedListingId}`);
+
   try {
     const accessToken = getAccessToken();
     const listingsObjectType = process.env.HUBSPOT_LISTINGS_OBJECT_TYPE || 'listings';
@@ -406,7 +484,7 @@ export async function associateContactToListing(
     // This approach is recommended for standard object associations and avoids
     // the need to specify numeric association type IDs.
     const associationResponse = await fetch(
-      `https://api.hubapi.com/crm/v4/objects/contacts/${contactId}/associations/${listingsObjectType}/${listingId}`,
+      `https://api.hubapi.com/crm/v4/objects/contacts/${trimmedContactId}/associations/${listingsObjectType}/${trimmedListingId}`,
       {
         method: 'PUT',
         headers: {
@@ -417,18 +495,30 @@ export async function associateContactToListing(
 
     if (!associationResponse.ok) {
       const errorData = await associationResponse.json().catch(() => ({}));
-      console.error('HubSpot association error:', errorData);
+      console.error('HubSpot association API error:', {
+        status: associationResponse.status,
+        statusText: associationResponse.statusText,
+        error: errorData,
+        contactId: trimmedContactId,
+        listingId: trimmedListingId,
+      });
       return {
         success: false,
-        error: `Failed to create association: ${associationResponse.status}`,
+        error: `HubSpot association error: ${associationResponse.status} - verify both Contact and Listing IDs are valid HubSpot record IDs`,
       };
     }
+
+    console.log(`Successfully associated Contact ${trimmedContactId} with Listing ${trimmedListingId}`);
 
     return {
       success: true,
     };
   } catch (error) {
-    console.error('Error associating contact to listing:', error);
+    console.error('Error associating contact to listing:', {
+      error: error instanceof Error ? error.message : error,
+      contactId: trimmedContactId,
+      listingId: trimmedListingId,
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

@@ -15,11 +15,24 @@ The Request Info form on listing detail pages captures user inquiries and create
 
 The `external_listing_id` is the **authoritative join key** between the website's property listings and HubSpot's Listings custom object.
 
+> **Important**: The `external_listing_id` in HubSpot **always maps to `assetId`** from the source data, NOT to `assetReferenceId`. See [DATA_MAPPING.md](./DATA_MAPPING.md) for detailed identifier documentation.
+
 ### Why external_listing_id?
 
 - **Decoupled from HubSpot IDs**: The website uses its own property IDs, independent of HubSpot's internal record IDs
 - **Data Sync Resilience**: If HubSpot records are recreated, the external ID allows re-association
 - **Source of Truth**: The property ID from the source system (the website) is always consistent
+
+### Source Data Identifiers
+
+Source property records contain multiple identifiers:
+
+| Field | Purpose | Maps to HubSpot |
+|-------|---------|-----------------|
+| `assetId` | Primary unique identifier | `external_listing_id` ✓ |
+| `assetReferenceId` | Secondary internal reference | Separate field (e.g., `reference_id`) |
+
+The `assetReferenceId` is a human-facing reference and should **NOT** be treated as the primary external ID.
 
 ### Flow
 
