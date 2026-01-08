@@ -4,15 +4,37 @@ import Link from 'next/link';
 export interface Property {
   id: string;
   title: string;
+  // Location & Identity
   address: string;
+  addressLine2?: string;
   city: string;
   state: string;
   zipCode: string;
+  county?: string;
+  // Pricing & Status
   price: number;
+  assetListingStatus: string;
+  underContractDate?: string;
+  soldDate?: string;
+  salePrice?: number;
+  // Property Characteristics
   bedrooms: number;
   bathrooms: number;
   squareFeet?: number;
+  lotSize?: number;
+  lotSizeSource?: string;
+  // Media
   image: string;
+  // Listing Flags / Badges
+  isNewListing?: boolean;
+  isFeatured?: boolean;
+  isAuction?: boolean;
+  isOnlineAuction?: boolean;
+  isVendeeFinancing?: boolean;
+  auctionStartDate?: string;
+  auctionEndDate?: string;
+  highBid?: number;
+  // Derived status for UI
   status: 'available' | 'coming-soon' | 'sold';
 }
 

@@ -61,20 +61,83 @@ export default async function PropertyDetailPage({
 
               {/* Property Info */}
               <div>
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {property.isNewListing && (
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      New Listing
+                    </span>
+                  )}
+                  {property.isFeatured && (
+                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      Featured
+                    </span>
+                  )}
+                  {property.isVendeeFinancing && (
+                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      VA Financing Available
+                    </span>
+                  )}
+                  {property.isAuction && (
+                    <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      Auction
+                    </span>
+                  )}
+                  {property.isOnlineAuction && (
+                    <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      Online Auction
+                    </span>
+                  )}
+                </div>
+
                 <h1 className="text-4xl font-bold text-gray-900 mb-4">
                   {property.title}
                 </h1>
                 
-                <p className="text-xl text-gray-600 mb-6">
-                  {property.address}, {property.city}, {property.state} {property.zipCode}
+                <p className="text-xl text-gray-600 mb-2">
+                  {property.address}{property.addressLine2 ? `, ${property.addressLine2}` : ''}, {property.city}, {property.state} {property.zipCode}
                 </p>
+                {property.county && (
+                  <p className="text-md text-gray-500 mb-6">
+                    {property.county} County
+                  </p>
+                )}
                 
-                <div className="text-4xl font-bold text-blue-600 mb-8">
-                  {formatPrice(property.price)}
+                <div className="mb-4">
+                  <div className="text-4xl font-bold text-blue-600">
+                    {formatPrice(property.price)}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {property.assetListingStatus}
+                    {property.underContractDate && (
+                      <span className="ml-2 text-orange-600">• Under Contract</span>
+                    )}
+                  </div>
+                  {property.soldDate && property.salePrice && (
+                    <div className="text-sm text-green-600 mt-1">
+                      Sold on {new Date(property.soldDate).toLocaleDateString()} for {formatPrice(property.salePrice)}
+                    </div>
+                  )}
                 </div>
+
+                {/* Auction Details */}
+                {property.isAuction && (
+                  <div className="bg-red-50 p-4 rounded-lg mb-6">
+                    <h3 className="font-semibold text-red-800 mb-2">Auction Details</h3>
+                    {property.auctionStartDate && (
+                      <p className="text-sm text-red-700">Start: {new Date(property.auctionStartDate).toLocaleString()}</p>
+                    )}
+                    {property.auctionEndDate && (
+                      <p className="text-sm text-red-700">End: {new Date(property.auctionEndDate).toLocaleString()}</p>
+                    )}
+                    {property.highBid && (
+                      <p className="text-lg font-bold text-red-800 mt-2">Current High Bid: {formatPrice(property.highBid)}</p>
+                    )}
+                  </div>
+                )}
                 
                 {/* Features */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   <div className="bg-gray-50 p-4 rounded-lg text-center">
                     <div className="text-2xl font-bold text-gray-900">{property.bedrooms}</div>
                     <div className="text-sm text-gray-600">Bedrooms</div>
@@ -89,6 +152,16 @@ export default async function PropertyDetailPage({
                         {property.squareFeet.toLocaleString()}
                       </div>
                       <div className="text-sm text-gray-600">Sq Ft</div>
+                    </div>
+                  )}
+                  {property.lotSize && (
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {property.lotSize}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Lot Size ({property.lotSizeSource || 'acres'})
+                      </div>
                     </div>
                   )}
                 </div>
