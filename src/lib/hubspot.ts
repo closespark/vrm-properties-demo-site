@@ -411,7 +411,6 @@ export async function associateContactToListing(
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
         },
       }
     );
