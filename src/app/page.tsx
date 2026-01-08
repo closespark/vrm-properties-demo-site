@@ -18,10 +18,10 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Find Your Dream Vacation Property
+                Find Your Next Home or Investment Property
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-blue-100">
-                Professional vacation rental management and real estate services
+                Real estate listings and property sales for homebuyers and investors
               </p>
               
               {/* Search Bar */}
@@ -49,7 +49,7 @@ export default function Home() {
                 Featured Properties
               </h2>
               <p className="text-lg text-gray-600">
-                Explore our handpicked selection of premium vacation rentals
+                Explore our handpicked selection of available properties
               </p>
             </div>
             
@@ -78,7 +78,7 @@ export default function Home() {
                 Our Services
               </h2>
               <p className="text-lg text-gray-600">
-                Comprehensive vacation rental management solutions
+                Comprehensive real estate services for buyers and investors
               </p>
             </div>
             
@@ -89,9 +89,9 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3 text-center">Property Management</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3 text-center">Property Listings</h3>
                 <p className="text-gray-600 text-center">
-                  Full-service property management with 24/7 support and maintenance
+                  Browse available homes including bank-owned and foreclosure properties
                 </p>
               </div>
               

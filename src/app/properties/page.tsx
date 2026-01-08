@@ -16,7 +16,7 @@ export default function PropertiesPage() {
               All Properties
             </h1>
             <p className="text-xl text-blue-100">
-              Browse our complete collection of vacation rental properties
+              Browse our complete collection of properties for sale
             </p>
           </div>
         </section>

@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">VRM Properties</h3>
             <p className="text-gray-400 text-sm">
-              Professional vacation rental management and real estate services.
+              Real estate listings and property sales for homebuyers and investors.
             </p>
           </div>
 

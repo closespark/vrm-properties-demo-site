@@ -192,42 +192,42 @@ export default async function PropertyDetailPage({
                 {property.squareFeet ? ` ${property.squareFeet.toLocaleString()} square feet` : ' a spacious layout'}.
               </p>
               <p className="mb-4">
-                Perfect for vacation rentals or as a personal retreat, this property combines luxury amenities with 
-                prime location. Whether you&apos;re looking for an investment opportunity or your dream vacation home, 
-                this property delivers on all fronts.
+                This property offers an excellent opportunity for homebuyers or investors looking to purchase 
+                in the {property.city}, {property.state} area. Whether you&apos;re seeking your next home or a promising 
+                investment property, this listing delivers great potential.
               </p>
               <p>
-                The property features modern finishes, high-end appliances, and stunning views. Located in a 
-                sought-after neighborhood with easy access to local attractions, dining, and entertainment.
+                The property features modern finishes and a desirable layout. Located in a 
+                well-established neighborhood with convenient access to local amenities, schools, and transportation.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Amenities */}
+        {/* Property Features */}
         <section className="bg-gray-50 py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Amenities</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Property Features</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                'Air Conditioning',
-                'Heating',
-                'Washer/Dryer',
-                'Parking',
-                'WiFi',
-                'Kitchen',
-                'Pool',
-                'Hot Tub',
-                'Gym',
-                'Outdoor Space',
-                'BBQ Grill',
-                'Beach Access',
-              ].map((amenity) => (
-                <div key={amenity} className="flex items-center gap-2 bg-white p-3 rounded-lg">
+                'Central Air Conditioning',
+                'Central Heating',
+                'Attached Garage',
+                'Paved Driveway',
+                'Fenced Yard',
+                'Updated Kitchen',
+                'Hardwood Floors',
+                'Energy Efficient Windows',
+                'Storage Space',
+                'Landscaped Yard',
+                'Covered Patio',
+                'Laundry Hookups',
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-2 bg-white p-3 rounded-lg">
                   <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-gray-700">{amenity}</span>
+                  <span className="text-gray-700">{feature}</span>
                 </div>
               ))}
             </div>

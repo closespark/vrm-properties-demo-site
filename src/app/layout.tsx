@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VRM Properties - Vacation Rental Management",
-  description: "Demo site showcasing HubSpot Listings, campaigns, and automation using a HubSpot sandbox environment.",
+  title: "VRM Properties - Real Estate Listings & Sales",
+  description: "Find and purchase residential real estate properties, including bank-owned and foreclosure homes. Demo site for HubSpot integration.",
 };
 
 export default function RootLayout({
