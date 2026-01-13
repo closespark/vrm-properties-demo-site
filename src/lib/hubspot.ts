@@ -455,6 +455,34 @@ export async function setMarketingConsent(
 // Listing Lookup
 // ============================================================================
 
+// ============================================================================
+// HubSpot Object Type Constants
+// ============================================================================
+
+/**
+ * HubSpot Object Type IDs
+ * 
+ * Listings are Object Library objects that require numeric objectTypeIds.
+ * They are NOT discoverable via /crm/v3/objects or /crm/v3/schemas.
+ * Only the numeric objectTypeId works for CRM v4 associations.
+ * 
+ * Contact: 0-1 (core object)
+ * Listings: 0-420 (Object Library object)
+ */
+const HUBSPOT_CONTACT_OBJECT_TYPE_ID = '0-1';
+const HUBSPOT_LISTINGS_OBJECT_TYPE_ID = '0-420';
+
+/**
+ * HubSpot Association Type ID for Contact ↔ Listing
+ * 
+ * This is a USER_DEFINED association type configured in HubSpot.
+ * The typeId 57 corresponds to "Interested Buyer" label.
+ * 
+ * IMPORTANT: Associations MUST specify an explicit associationTypeId
+ * or they will silently "succeed" and never render in the UI.
+ */
+const HUBSPOT_CONTACT_LISTING_ASSOCIATION_TYPE_ID = 57;
+
 /**
  * Finds a Listing record in HubSpot by its external_listing_id.
  * 
@@ -470,6 +498,10 @@ export async function setMarketingConsent(
  * **IMPORTANT**: Always resolve the HubSpot Listing record ID via this function
  * before attempting any association. Do NOT use assetReferenceId or any other
  * identifier for lookups - this prevents 500 errors from invalid association calls.
+ * 
+ * **API Note**: Listings are Object Library objects with objectTypeId 0-420.
+ * They are NOT discoverable via /crm/v3/objects or /crm/v3/schemas string names.
+ * The search endpoint uses the numeric objectTypeId for lookups.
  * 
  * @param externalListingId - The external listing ID to search for (maps to assetId)
  * @returns Result containing the HubSpot Listing ID if found, with notFound flag for disambiguation
@@ -497,12 +529,10 @@ export async function findListingByExternalId(
     const accessToken = getAccessToken();
 
     // Search for the Listing object by external_listing_id
-    // The Listings object is a custom object in HubSpot, so we use the
-    // CRM Objects API with the object type identifier
-    const listingsObjectType = process.env.HUBSPOT_LISTINGS_OBJECT_TYPE || 'listings';
-
+    // Listings are Object Library objects requiring numeric objectTypeId (0-420)
+    // Do NOT use string names like 'listings' - they won't work
     const searchResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/objects/${listingsObjectType}/search`,
+      `https://api.hubapi.com/crm/v3/objects/${HUBSPOT_LISTINGS_OBJECT_TYPE_ID}/search`,
       {
         method: 'POST',
         headers: {
@@ -579,7 +609,7 @@ export async function findListingByExternalId(
 // ============================================================================
 
 /**
- * Associates a Contact with a Listing in HubSpot.
+ * Associates a Contact with a Listing in HubSpot using CRM v4 API.
  * 
  * This creates a many-to-many relationship between Contacts and Listings:
  * - One Contact can be associated with many Listings (inquired about multiple properties)
@@ -592,6 +622,12 @@ export async function findListingByExternalId(
  * **IMPORTANT**: Both contactId and listingId must be valid HubSpot record IDs.
  * Always resolve the Listing via findListingByExternalId() first to get the
  * correct HubSpot Listing ID. Using external IDs directly will cause 500 errors.
+ * 
+ * **API REQUIREMENTS** (Critical for Listings Object Library objects):
+ * - Use CRM v4 batch endpoint: POST /crm/v4/associations/{fromObjectTypeId}/{toObjectTypeId}/batch/create
+ * - Use numeric objectTypeIds: 0-1 (Contact), 0-420 (Listings)
+ * - MUST specify explicit associationTypeId in the types array
+ * - Without explicit type, associations will silently "succeed" but never render in UI
  * 
  * @param contactId - The HubSpot Contact ID (from contact lookup or consent result)
  * @param listingId - The HubSpot Listing ID (from findListingByExternalId, NOT the assetId)
@@ -622,22 +658,25 @@ export async function associateContactToListing(
   }
 
   // Log the association attempt for debugging
-  console.log(`Creating association: Contact ${trimmedContactId} -> Listing ${trimmedListingId}`);
+  console.log(`Creating CRM v4 association: Contact ${trimmedContactId} -> Listing ${trimmedListingId}`);
 
   try {
     const accessToken = getAccessToken();
-    const listingsObjectType = process.env.HUBSPOT_LISTINGS_OBJECT_TYPE || 'listings';
 
     // Use the CRM Associations API v4 batch endpoint to create the association.
-    // The batch endpoint is used instead of the single-association PUT endpoint
-    // because HubSpot's single endpoint frequently returns 500 errors for:
-    // - Custom objects (like Listings)
-    // - Sandbox accounts
-    // - Recently created association definitions
-    // The batch endpoint uses different internal validation and persistence logic
-    // that handles these cases reliably.
+    // 
+    // CRITICAL: Listings are Object Library objects requiring:
+    // 1. Numeric objectTypeIds in the URL path (0-1 for Contact, 0-420 for Listings)
+    // 2. Explicit associationTypeId in the request body (typeId 57 = "Interested Buyer")
+    // 
+    // Without explicit type specification, associations may return HTTP 200 but:
+    // - Have no usable type
+    // - Never render in the UI
+    // - Be effectively orphaned
+    // 
+    // The API endpoint uses numeric IDs: /crm/v4/associations/0-1/0-420/batch/create
     const associationResponse = await fetch(
-      `https://api.hubapi.com/crm/v4/associations/contacts/${listingsObjectType}/batch/create`,
+      `https://api.hubapi.com/crm/v4/associations/${HUBSPOT_CONTACT_OBJECT_TYPE_ID}/${HUBSPOT_LISTINGS_OBJECT_TYPE_ID}/batch/create`,
       {
         method: 'POST',
         headers: {
@@ -649,6 +688,12 @@ export async function associateContactToListing(
             {
               from: { id: trimmedContactId },
               to: { id: trimmedListingId },
+              types: [
+                {
+                  associationCategory: 'USER_DEFINED',
+                  associationTypeId: HUBSPOT_CONTACT_LISTING_ASSOCIATION_TYPE_ID,
+                },
+              ],
             },
           ],
         }),
@@ -657,12 +702,13 @@ export async function associateContactToListing(
 
     if (!associationResponse.ok) {
       const errorData = await associationResponse.json().catch(() => ({}));
-      console.error('HubSpot association API error:', {
+      console.error('HubSpot CRM v4 association API error:', {
         status: associationResponse.status,
         statusText: associationResponse.statusText,
         error: errorData,
         contactId: trimmedContactId,
         listingId: trimmedListingId,
+        endpoint: `/crm/v4/associations/${HUBSPOT_CONTACT_OBJECT_TYPE_ID}/${HUBSPOT_LISTINGS_OBJECT_TYPE_ID}/batch/create`,
       });
       return {
         success: false,
@@ -670,7 +716,19 @@ export async function associateContactToListing(
       };
     }
 
-    console.log(`Successfully associated Contact ${trimmedContactId} with Listing ${trimmedListingId}`);
+    // Parse response to check for any errors in the batch result
+    const responseData = await associationResponse.json().catch(() => ({}));
+    
+    // Check if there are any errors in the response
+    if (responseData.errors && responseData.errors.length > 0) {
+      console.error('HubSpot CRM v4 association batch returned errors:', responseData.errors);
+      return {
+        success: false,
+        error: `Association batch error: ${JSON.stringify(responseData.errors)}`,
+      };
+    }
+
+    console.log(`Successfully associated Contact ${trimmedContactId} with Listing ${trimmedListingId} using CRM v4 API with typeId ${HUBSPOT_CONTACT_LISTING_ASSOCIATION_TYPE_ID}`);
 
     return {
       success: true,
